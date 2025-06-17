@@ -1,39 +1,53 @@
 /**
  * Script para renomeação automática de pastas no Google Drive
- * baseado nos dados da planilha FUP RENAULT - PADRÃO
- * VERSÃO ENXUGADA - Apenas funcionalidades essenciais
+ * baseado nos dados de uma planilha do Google Sheets
+ * VERSÃO TEMPLATE - Configure suas próprias informações
  */
 
-// Configurações
-const SPREADSHEET_ID = '1C9ZkOqXBh5IdjXP8K8CuEsmmQgy5C1yZxXHKJFnHj24';
-const SHEET_NAME = 'ANDAM.';
+// ===============================
+// CONFIGURAÇÕES - EDITE AQUI
+// ===============================
+
+// ID da planilha do Google Sheets (encontre na URL da planilha)
+const SPREADSHEET_ID = 'SEU_SPREADSHEET_ID_AQUI';
+
+// Nome da aba da planilha
+const SHEET_NAME = 'NOME_DA_ABA';
 
 // IDs das pastas onde procurar os processos
-const PASTA_MPR_2025_ID = '1NjYLk2dt8PB3RpaJ0C9O8K_Gs_8OIHoZ';
-const PASTA_PHF_DIV_OHS_ID = '1AXkNs3PHYfhMJ78ZAf656dbIpmY6TQJw';
+const PASTA_PRINCIPAL_ID = 'ID_DA_PASTA_PRINCIPAL';
+const PASTA_SECUNDARIA_ID = 'ID_DA_PASTA_SECUNDARIA';
 
-// Colunas da planilha
-const COL_REF_RENAULT = 1; // Coluna A
-const COL_REF_GNH = 2;     // Coluna B
+// Colunas da planilha (números das colunas)
+const COL_REFERENCIA_ORIGEM = 1;  // Coluna A - Referência original
+const COL_REFERENCIA_DESTINO = 2; // Coluna B - Nova referência
 
-// Meses para busca no MPR
-const MESES_MPR = [
+// Subpastas para busca (adapte conforme sua estrutura)
+const SUBPASTAS_BUSCA = [
   '01 - JANEIRO', '02 - FEVEREIRO', '03 - MARÇO', '04 - ABRIL',
   '05 - MAIO', '06 - JUNHO', '07 - JULHO', '08 - AGOSTO',
   '09 - SETEMBRO', '10 - OUTUBRO', '11 - NOVEMBRO', '12 - DEZEMBRO'
 ];
+
+// Horários de trabalho (formato 24h)
+const HORA_INICIO = 8;  // 8h
+const HORA_FIM = 18;    // 18h
+
+// ===============================
+// CÓDIGO PRINCIPAL
+// ===============================
 
 /**
  * Função principal - executa a renomeação (com controle de horário)
  */
 function renomearPastas() {
   try {
-    // Verificar se está no horário de trabalho (8h às 18h)
+    // Verificar se está no horário de trabalho
     const agora = new Date();
     const hora = agora.getHours();
     
-    if (hora < 8 || hora >= 18) {
-      console.log(`⏰ Fora do horário de trabalho (${hora}h). Script pausado até 8h.`);
+    if (hora < HORA_INICIO || hora >= HORA_FIM) {
+      console.log(`⏰ Fora do horário de trabalho (${hora}h). Script pausado até ${HORA_INICIO}h.`);
       return;
     }
     
@@ -52,29 +66,29 @@ function renomearPastas() {
     
     for (let i = 0; i < dados.length; i++) {
       const linha = dados[i];
-      const refRenault = linha[COL_REF_RENAULT - 1];
-      const refGnh = linha[COL_REF_GNH - 1];
+      const refOrigem = linha[COL_REFERENCIA_ORIGEM - 1];
+      const refDestino = linha[COL_REFERENCIA_DESTINO - 1];
       
-      // Pular cabeçalho
-      if (refRenault === 'REF. RENAULT' || refGnh === 'REF. GNH') continue;
+      // Pular cabeçalho (adapte conforme seus dados)
+      if (refOrigem === 'REFERENCIA_ORIGEM' || refDestino === 'REFERENCIA_DESTINO') continue;
       
       // Verificar dados válidos
-      if (!refRenault || !refGnh || 
-          !refRenault.toString().trim() || 
-          !refGnh.toString().trim()) {
+      if (!refOrigem || !refDestino || 
+          !refOrigem.toString().trim() || 
+          !refDestino.toString().trim()) {
         continue;
       }
 
-      // Contar processos com X
-      if (refRenault.toString().toUpperCase().trim() === 'X') {
+      // Contar processos com X (indicando processo pendente)
+      if (refOrigem.toString().toUpperCase().trim() === 'X') {
         ignoradosX++;
         continue;
       }
 
-      console.log(`\n--- Linha ${i + 1}: ${refRenault} | ${refGnh} ---`);
+      console.log(`\n--- Linha ${i + 1}: ${refOrigem} | ${refDestino} ---`);
 
       try {
-        if (processarPasta(refRenault.toString().trim(), refGnh.toString().trim())) {
+        if (processarPasta(refOrigem.toString().trim(), refDestino.toString().trim())) {
           renomeados++;
           console.log('✅ Renomeada');
         }
@@ -123,26 +137,26 @@ function obterDadosPlanilha() {
 /**
  * Processar uma pasta específica
  */
-function processarPasta(refRenault, refGnh) {
+function processarPasta(refOrigem, refDestino) {
   // Pular se a referência ainda é "X" (processo não digitado)
-  if (refRenault.toUpperCase() === 'X') {
+  if (refOrigem.toUpperCase() === 'X') {
     console.log(`⏸️ Processo pendente de digitação (REF: X)`);
     return false;
   }
   
-  // Possíveis nomes da pasta atual (incluindo versões com X)
+  // Possíveis nomes da pasta atual (adapte conforme seu padrão)
   const possiveisNomes = [
-    refGnh.replace('/', '_'),           // P628646_25
-    refGnh.replace('/', '-'),           // P628646-25
-    refGnh,                             // P628646/25
-    refGnh.replace('/', '_') + '_X',    // P628646_25_X
-    refGnh.replace('/', '-') + '_X',    // P628646-25_X
-    refGnh.replace('/', '_') + '_x',    // P628646_25_x
-    refGnh.replace('/', '-') + '_x'     // P628646-25_x
+    refDestino.replace('/', '_'),           // Formato com underscore
+    refDestino.replace('/', '-'),           // Formato com hífen
+    refDestino,                             // Formato original
+    refDestino.replace('/', '_') + '_X',    // Com indicador X
+    refDestino.replace('/', '-') + '_X',    
+    refDestino.replace('/', '_') + '_x',    
+    refDestino.replace('/', '-') + '_x'     
   ];
   
-  // Nome final desejado
-  const nomeNovo = `${refGnh.replace('/', '-')}_${refRenault}`;
+  // Nome final desejado (adapte o padrão conforme necessário)
+  const nomeNovo = `${refDestino.replace('/', '-')}_${refOrigem}`;
   
   // Buscar pasta
   let pasta = null;
@@ -170,7 +184,7 @@ function processarPasta(refRenault, refGnh) {
   }
   
   // Verificar se já tem a referência (mas não é exatamente igual)
-  if (nomeAtual.includes(refRenault) && !nomeAtual.toUpperCase().includes('_X')) {
+  if (nomeAtual.includes(refOrigem) && !nomeAtual.toUpperCase().includes('_X')) {
     console.log(`ℹ️ Já contém a referência: ${nomeAtual}`);
     return false;
   }
@@ -200,13 +214,13 @@ function processarPasta(refRenault, refGnh) {
  */
 function encontrarPasta(nomePasta) {
   try {
-    // 1. Buscar no MPR/2025
-    const pastaMpr = buscarNoMpr(nomePasta);
-    if (pastaMpr) return pastaMpr;
+    // 1. Buscar na pasta principal
+    const pastaPrincipal = buscarNaPastaPrincipal(nomePasta);
+    if (pastaPrincipal) return pastaPrincipal;
     
-    // 2. Buscar no PHF-DIV-OHS
-    const pastaPhf = buscarNoPhf(nomePasta);
-    if (pastaPhf) return pastaPhf;
+    // 2. Buscar na pasta secundária
+    const pastaSecundaria = buscarNaPastaSecundaria(nomePasta);
+    if (pastaSecundaria) return pastaSecundaria;
     
     // 3. Busca geral
     const pastasGeral = DriveApp.getFoldersByName(nomePasta);
@@ -219,40 +233,40 @@ function encontrarPasta(nomePasta) {
 }
 
 /**
- * Buscar nas pastas mensais do MPR/2025
+ * Buscar nas subpastas da pasta principal
  */
-function buscarNoMpr(nomePasta) {
+function buscarNaPastaPrincipal(nomePasta) {
   try {
-    const pastaMpr2025 = DriveApp.getFolderById(PASTA_MPR_2025_ID);
+    const pastaPrincipal = DriveApp.getFolderById(PASTA_PRINCIPAL_ID);
     
-    // Buscar diretamente na pasta 2025
-    let pasta = obterSubpasta(pastaMpr2025, nomePasta);
+    // Buscar diretamente na pasta principal
+    let pasta = obterSubpasta(pastaPrincipal, nomePasta);
     if (pasta) return pasta;
     
-    // Buscar em cada pasta mensal
-    for (const mes of MESES_MPR) {
-      const pastaMes = obterSubpasta(pastaMpr2025, mes);
-      if (pastaMes) {
-        pasta = obterSubpasta(pastaMes, nomePasta);
+    // Buscar em cada subpasta
+    for (const subpasta of SUBPASTAS_BUSCA) {
+      const pastaSubpasta = obterSubpasta(pastaPrincipal, subpasta);
+      if (pastaSubpasta) {
+        pasta = obterSubpasta(pastaSubpasta, nomePasta);
         if (pasta) return pasta;
       }
     }
   } catch (error) {
-    console.error(`❌ Erro no MPR: ${error.message}`);
+    console.error(`❌ Erro na pasta principal: ${error.message}`);
   }
   
   return null;
 }
 
 /**
- * Buscar na pasta PHF-DIV-OHS
+ * Buscar na pasta secundária
  */
-function buscarNoPhf(nomePasta) {
+function buscarNaPastaSecundaria(nomePasta) {
   try {
-    const pastaPhf = DriveApp.getFolderById(PASTA_PHF_DIV_OHS_ID);
-    return obterSubpasta(pastaPhf, nomePasta);
+    const pastaSecundaria = DriveApp.getFolderById(PASTA_SECUNDARIA_ID);
+    return obterSubpasta(pastaSecundaria, nomePasta);
   } catch (error) {
-    console.error(`❌ Erro no PHF: ${error.message}`);
+    console.error(`❌ Erro na pasta secundária: ${error.message}`);
     return null;
   }
 }
@@ -270,7 +284,7 @@ function obterSubpasta(pastaPai, nomeSubpasta) {
 }
 
 /**
- * Configurar execução automática (8h às 18h, de 4 em 4 horas)
+ * Configurar execução automática
  */
 function configurarExecucaoAutomatica() {
   try {
@@ -284,8 +298,8 @@ function configurarExecucaoAutomatica() {
       console.log(`🗑️ ${triggersExistentes.length} trigger(s) anterior(es) removido(s)`);
     }
     
-    // Criar triggers para horários específicos: 8h, 12h, 16h
-    const horarios = [8, 12, 16];
+    // Criar triggers para horários específicos
+    const horarios = [HORA_INICIO, 12, HORA_FIM - 2]; // Ex: 8h, 12h, 16h
     
     horarios.forEach(hora => {
       ScriptApp.newTrigger('renomearPastas')
@@ -296,26 +310,10 @@ function configurarExecucaoAutomatica() {
     });
     
     console.log('✅ Execução automática configurada para:');
-    console.log('   • 08:00 (início do expediente)');
-    console.log('   • 12:00 (meio do dia)');
-    console.log('   • 16:00 (final da tarde)');
-    console.log('📝 Script só executa entre 8h e 18h (controle interno)');
-    
-    // Mostrar próximas execuções
-    const agora = new Date();
-    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-    
-    console.log('\n🕐 Próximas execuções:');
     horarios.forEach(hora => {
-      const proximaExecucao = new Date(hoje);
-      proximaExecucao.setHours(hora, 0, 0, 0);
-      
-      if (proximaExecucao <= agora) {
-        proximaExecucao.setDate(proximaExecucao.getDate() + 1);
-      }
-      
-      console.log(`   • ${proximaExecucao.toLocaleString()}`);
+      console.log(`   • ${hora.toString().padStart(2, '0')}:00`);
     });
+    console.log(`📝 Script só executa entre ${HORA_INICIO}h e ${HORA_FIM}h (controle interno)`);
     
   } catch (error) {
     console.error('❌ Erro ao configurar automação:', error.message);
@@ -323,7 +321,7 @@ function configurarExecucaoAutomatica() {
 }
 
 /**
- * Listar triggers ativos com horários
+ * Listar triggers ativos
  */
 function listarTriggers() {
   console.log('=== TRIGGERS ATIVOS ===');
@@ -346,8 +344,8 @@ function listarTriggers() {
       console.log(`   ID: ${trigger.getUniqueId()}`);
     });
     
-    console.log('\n📋 Configuração: Executa diariamente às 8h, 12h e 16h');
-    console.log('🕐 Controle interno: Só processa entre 8h e 18h');
+    console.log(`\n📋 Configuração: Executa diariamente em horários específicos`);
+    console.log(`🕐 Controle interno: Só processa entre ${HORA_INICIO}h e ${HORA_FIM}h`);
     
   } catch (error) {
     console.error('❌ Erro ao listar triggers:', error.message);
@@ -355,7 +353,7 @@ function listarTriggers() {
 }
 
 /**
- * Teste rápido com uma pasta específica
+ * Teste rápido com dados de exemplo
  */
 function testeRapido() {
   console.log('=== TESTE RÁPIDO ===');
@@ -363,7 +361,7 @@ function testeRapido() {
   // Exemplo 1: Processo com X (deve ser ignorado)
   console.log('\n1. Testando processo pendente:');
   try {
-    const resultado1 = processarPasta('X', 'P628646/25');
+    const resultado1 = processarPasta('X', 'EXEMPLO123/25');
     console.log(`Resultado: ${resultado1 ? 'Processado' : 'Ignorado (correto)'}`);
   } catch (error) {
     console.error('❌ Erro:', error.message);
@@ -372,7 +370,7 @@ function testeRapido() {
   // Exemplo 2: Processo com referência real (deve ser processado)
   console.log('\n2. Testando processo com referência:');
   try {
-    const resultado2 = processarPasta('MQBPYA003325', 'P628646/25');
+    const resultado2 = processarPasta('REF123456', 'EXEMPLO123/25');
     console.log(`Resultado: ${resultado2 ? 'Processado' : 'Não processado'}`);
   } catch (error) {
     console.error('❌ Erro:', error.message);
@@ -390,33 +388,27 @@ function primeiraConfiguracao() {
     const planilha = SpreadsheetApp.openById(SPREADSHEET_ID);
     console.log(`✅ Planilha acessível: ${planilha.getName()}`);
     
-    const pastaMpr = DriveApp.getFolderById(PASTA_MPR_2025_ID);
-    console.log(`✅ Pasta MPR acessível: ${pastaMpr.getName()}`);
+    const pastaPrincipal = DriveApp.getFolderById(PASTA_PRINCIPAL_ID);
+    console.log(`✅ Pasta principal acessível: ${pastaPrincipal.getName()}`);
     
-    const pastaPhf = DriveApp.getFolderById(PASTA_PHF_DIV_OHS_ID);
-    console.log(`✅ Pasta PHF acessível: ${pastaPhf.getName()}`);
+    const pastaSecundaria = DriveApp.getFolderById(PASTA_SECUNDARIA_ID);
+    console.log(`✅ Pasta secundária acessível: ${pastaSecundaria.getName()}`);
     
     // Mostrar horário atual
     const agora = new Date();
     const hora = agora.getHours();
     console.log(`⏰ Horário atual: ${agora.toLocaleString()} (${hora}h)`);
     
-    if (hora >= 8 && hora < 18) {
+    if (hora >= HORA_INICIO && hora < HORA_FIM) {
       console.log('✅ Dentro do horário de trabalho');
     } else {
-      console.log('⚠️ Fora do horário de trabalho (8h às 18h)');
+      console.log(`⚠️ Fora do horário de trabalho (${HORA_INICIO}h às ${HORA_FIM}h)`);
     }
     
     console.log('\n🎉 Configuração OK! Próximos passos:');
     console.log('• Execute: renomearPastas() - para testar uma execução manual');
     console.log('• Execute: configurarExecucaoAutomatica() - para ativar automação');
     console.log('• Execute: listarTriggers() - para ver triggers ativos');
-    
-    console.log('\n📅 Horários de execução automática:');
-    console.log('• 08:00 - Início do expediente');
-    console.log('• 12:00 - Meio do dia');  
-    console.log('• 16:00 - Final da tarde');
-    console.log('• Não executa fora do horário 8h-18h');
     
   } catch (error) {
     console.error('❌ Erro na configuração:', error.message);
